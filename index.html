@@ -341,7 +341,7 @@
   <main id="party" aria-label="Birthday celebration">
     <div class="hud pixel">
       <span>P1 &#9656; <span data-name></span></span>
-      <span class="hp" title="HP">&#9829;&#9829;&#9829;&#9829;&#9829;</span>
+      <span class="hp" title="Lives">&#9829;&#9829;&#9829;</span>
       <span class="score">SCORE <span id="score">0000000</span></span>
     </div>
 
@@ -436,6 +436,12 @@
    EDIT ME: personalise the site here
    ===================================================================== */
 const CONFIG = {
+  // The only name the terminal accepts (capital letters and spaces don't matter).
+  // Add spellings to acceptedNames if you want, e.g. ['Abdoull', 'Abdoul'].
+  playerName: 'Abdoull',
+  acceptedNames: ['Abdoull'],
+  lives: 3,
+
   // His new age, e.g. 21 shows "LVL 20 > LVL 21". Leave null to show "level++".
   age: null,
 
@@ -524,6 +530,8 @@ const sfx = {
   achieve() { [659.25, 783.99, 1046.5, 1318.5].forEach((f, i) => tone(f, now() + i * 0.07, 0.16, { vol: 0.055, type: 'triangle' })); tone(1568, now() + 0.3, 0.35, { vol: 0.05 }); },
   levelUp() { [392, 523.25, 659.25, 783.99, 1046.5, 1318.5, 1568].forEach((f, i) => tone(f, now() + i * 0.055, 0.12, { vol: 0.055 })); },
   puff()    { noise(now(), 0.4, { vol: 0.18, freq: 900, q: 0.4, type: 'lowpass' }); },
+  lifeLost(){ tone(660, now(), 0.12, { vol: 0.07 }); tone(440, now() + 0.12, 0.12, { vol: 0.07 }); tone(220, now() + 0.24, 0.3, { type: 'sawtooth', vol: 0.06 }); },
+  gameOver(){ [523.25, 440, 349.23, 261.63].forEach((f, i) => tone(f, now() + i * 0.22, 0.2, { vol: 0.07 })); tone(130.8, now() + 0.9, 0.8, { type: 'sawtooth', vol: 0.06, slideTo: 60 }); },
   powerOff(){ tone(900, now(), 0.5, { type: 'sine', vol: 0.08, slideTo: 40 }); },
   powerOn() { tone(60, now(), 0.45, { type: 'sine', vol: 0.08, slideTo: 1200 }); noise(now() + 0.1, 0.25, { vol: 0.05, freq: 5000 }); },
 };
@@ -709,10 +717,37 @@ async function boot() {
   addLine();
   await typeLine('ENTER YOUR NAME, PLAYER ONE:', { cls: 'white', speed: 40, pause: 150 });
 
-  const name = await askName();
+  const norm = (s) => s.trim().toLowerCase().replace(/\s+/g, ' ');
+  const accepted = CONFIG.acceptedNames.map(norm);
+  const hearts = (n) => '♥'.repeat(n) + '♡'.repeat(CONFIG.lives - n);
+  let lives = CONFIG.lives, gameOvers = 0;
+  while (true) {
+    const entry = await askName();
+    addLine();
+    await typeLine(`> authenticating "${entry}" ...`, { pause: 450 });
+    if (accepted.includes(norm(entry))) break;
+    lives--;
+    sfx.error();
+    await typeLine(`> ACCESS DENIED: "${entry}" is not the birthday player.`, { cls: 'err' });
+    if (lives > 0) {
+      sfx.lifeLost();
+      await typeLine(`> -1 LIFE   ${hearts(lives)}`, { cls: 'err', pause: 300 });
+    } else {
+      gameOvers++;
+      await sleep(300);
+      sfx.gameOver();
+      await typeLine('*** GAME OVER ***', { cls: 'err huge', speed: 90, pause: 900 });
+      await typeLine('> inserting coin... CONTINUE? YES', { cls: 'warn', pause: 200 });
+      sfx.coin();
+      lives = CONFIG.lives;
+      await typeLine(`> lives restored   ${hearts(lives)}`, { cls: 'ok', pause: 200 });
+      if (gameOvers >= 1) await typeLine(`> HINT: the birthday player's name starts with "${CONFIG.playerName[0].toUpperCase()}"`, { cls: 'warn', pause: 200 });
+    }
+    addLine();
+    await typeLine('ENTER THE CORRECT NAME:', { cls: 'white', speed: 40, pause: 150 });
+  }
+  const name = CONFIG.playerName;
   sfx.ok();
-  addLine();
-  await typeLine(`> authenticating "${name}" ...`, { pause: 500 });
   await progressBar('verifying legend status');
   await typeLine('> ACCESS GRANTED', { cls: 'ok huge', speed: 55, pause: 0 });
   sfx.granted();
@@ -728,7 +763,7 @@ async function boot() {
   const cd = await typeLine('> launching party.exe in ', { pause: 0 });
   for (const n of ['3', '..2', '..1']) { await typeLine(n, { el: cd, speed: 60, pause: 0 }); sfx.coin(); await sleep(550); }
   await sleep(200);
-  enterParty(name);
+  enterParty(name, lives);
 }
 
 /* ---------------------------------------------------------------------
@@ -1393,8 +1428,9 @@ function onVisible(el, fn, delay = 0) {
   io.observe(el);
 }
 
-async function enterParty(name) {
+async function enterParty(name, lives = CONFIG.lives) {
   playerName = name;
+  $('.hud .hp').textContent = '♥'.repeat(lives) + '♡'.repeat(CONFIG.lives - lives);
   const win = $('#term-window');
   sfx.powerOff();
   win.classList.add('crt-off');
