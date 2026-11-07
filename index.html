@@ -158,6 +158,13 @@
   .player-name.sil { color: #fff; text-shadow: 0 0 18px #fff, 0 0 42px rgba(255,255,255,.8); }
   .player-name.evolved { animation: evoPop .9s ease-out; }
   @keyframes evoPop { 0% { transform: scale(1.35); filter: brightness(3); } 100% { transform: none; filter: none; } }
+  .partner { margin: 26px auto 0; display: grid; justify-items: center; gap: 10px; }
+  #partner { width: clamp(150px, 30vw, 210px); aspect-ratio: 1; image-rendering: pixelated; transition: filter .15s; }
+  #partner.sil { filter: drop-shadow(0 0 8px #fff) drop-shadow(0 0 24px rgba(255,255,255,.85)); }
+  #partner.evolved { animation: evoPop .9s ease-out; }
+  .partner-tag { font-size: 10px; color: var(--cyan); text-shadow: 0 0 6px rgba(41,231,255,.6); }
+  .xp { margin-top: 24px; }
+  .evo-msg { white-space: pre-line; }
   .evo-msg { margin-top: 18px; min-height: 1.3em; color: #fff; font-size: clamp(20px, 3.4vw, 26px); text-shadow: 0 0 8px rgba(255,255,255,.5); }
   #flash { position: fixed; inset: 0; z-index: 58; background: #fff; opacity: 0; pointer-events: none; }
   #flash.go { animation: flash 1.2s ease-out; }
@@ -342,6 +349,11 @@
       <div class="lvl-up pixel blink">&#9733; LEVEL UP &#9733;</div>
       <h1 class="glitch">HAPPY<br>BIRTHDAY</h1>
       <div class="player-name" data-name></div>
+
+      <div class="partner">
+        <canvas id="partner" width="168" height="168" role="img" aria-label="Your partner creature, Bytling"></canvas>
+        <div class="partner-tag pixel" id="partner-tag">PARTNER &middot; BYTLING &middot; LV.1</div>
+      </div>
 
       <div class="xp" id="xp">
         <div class="xp-head pixel"><span>XP</span><span id="xp-label">LOADING...</span></div>
@@ -801,12 +813,104 @@ const EVO_BARS = [
 ];
 const ARP_ORDER = [0, 1, 2, 3, 2, 1, 2, 3];
 
+/* Partner creatures: original pixel-art designs. Each sprite is the LEFT half;
+   the right half is mirrored. '.' = transparent, 'y' = blinking cursor. */
+const CREATURES = {
+  bytling: {
+    name: 'BYTLING',
+    pal: { k: '#062b14', g: '#66ffa3', G: '#26c46a', w: '#ffffff', c: '#eaffd9', y: '#ffe03d' },
+    half: [
+      '.......y',
+      '.......y',
+      '.......k',
+      '.....kkk',
+      '...kkggg',
+      '..kggggg',
+      '.kgggggg',
+      '.kggkkgg',
+      'kgggkwgg',
+      'kgggkkgg',
+      'kGggggkg',
+      'kGgggcck',
+      'kGggcccc',
+      '.kGgcccc',
+      '..kkkkkk',
+      '...kGk..',
+      '...kkk..',
+    ],
+  },
+  teradrake: {
+    name: 'TERADRAKE',
+    pal: { k: '#0d0820', b: '#6b4dff', B: '#4a2fd1', h: '#9c85ff', c: '#ffe9b8', C: '#e8c27a', o: '#ffd23d', O: '#c99a12',
+           e: '#33ff66', w: '#ffffff', s: '#29e7ff', S: '#138aa3', v: '#1b3f73', n: '#33ff66', y: '#ffe03d' },
+    half: [
+      '....oo.....y',
+      '.....oo....y',
+      '......oO....',
+      '.....kkOkkkk',
+      '....kSssssss',
+      '..kkkbhbbbbb',
+      '.kssSbhbbbbb',
+      '.kssSbbkkbbb',
+      '.kssSbkeekbb',
+      '.kssSbbkkbbb',
+      '..kkkbbbbbbb',
+      '....kbbbbbbb',
+      '....kbbkwkkk',
+      'k....kbbbbbb',
+      'kk....kkbbbb',
+      'kvk..kbbbccc',
+      'kvnk.kbbcccc',
+      'kvvnkkbbcCcc',
+      'kvnvnkbbcccc',
+      'kvvvnkbbcCcc',
+      'kvnvvkbbcccc',
+      'kkvnvkkbbccc',
+      '..kkk.kbbbbk',
+      '......kbbbbk',
+      '.....kwkwkk.',
+      '......kkkk..',
+    ],
+  },
+};
+
+const partner = (() => {
+  const cv = $('#partner'), c = cv.getContext('2d'), GRID = 28, PX = 6;
+  const maps = {};
+  for (const [k, cr] of Object.entries(CREATURES)) maps[k] = cr.half.map((r) => r + [...r].reverse().join(''));
+  const st = { form: 'bytling', sil: false };
+  function draw(t) {
+    c.clearRect(0, 0, GRID * PX, GRID * PX);
+    const map = maps[st.form], pal = CREATURES[st.form].pal;
+    const h = map.length, w = map[0].length;
+    const bob = !st.sil && !reduceMotion && Math.floor(t / 420) % 2 ? 1 : 0;
+    const ox = Math.floor((GRID - w) / 2), oy = GRID - h - 1 + bob;
+    const cursorOn = Math.floor(t / 500) % 2 === 0;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const ch = map[y][x];
+      if (ch === '.' || (ch === 'y' && !cursorOn && !st.sil)) continue;
+      c.fillStyle = st.sil ? '#ffffff' : pal[ch];
+      c.fillRect((ox + x) * PX, (oy + y) * PX, PX, PX);
+    }
+  }
+  let last = 0;
+  (function loop(t) { requestAnimationFrame(loop); if (t - last < 50) return; last = t; draw(t); })(0);
+  return {
+    set(form, sil) { st.form = form; st.sil = sil; cv.classList.toggle('sil', sil); draw(performance.now()); },
+    el: cv,
+  };
+})();
+
 async function runXP() {
   const fill = $('#xp-fill'), label = $('#xp-label'), msg = $('#evo-msg');
-  const nameEl = $('.player-name'), N = playerName.toUpperCase();
+  const N = playerName.toUpperCase();
+  const A = CREATURES.bytling.name, B = CREATURES.teradrake.name;
   if (!actx) initAudio();
+  msg.textContent = `Your partner ${A} has been with you since LVL 1...`;
+  await sleep(2200);
   label.textContent = 'EVOLVING...';
-  msg.textContent = `!! ${N} IS EVOLVING !!`;
+  msg.textContent = `!! ${A} IS EVOLVING !!`;
+  partner.set('bytling', true);
 
   const bus = actx ? actx.createGain() : null;
   if (bus) bus.connect(master);
@@ -828,9 +932,9 @@ async function runXP() {
   }
   const build = t, end = t0 + build;
 
-  // flicker the name in time with the music
+  // swap between the old and new silhouette in time with the music, faster and faster
   const timers = [];
-  if (!reduceMotion) flips.forEach((st, i) => timers.push(setTimeout(() => nameEl.classList.toggle('sil', i % 2 === 0), (st - now()) * 1000)));
+  if (!reduceMotion) flips.forEach((st, i) => timers.push(setTimeout(() => partner.set(i % 2 ? 'bytling' : 'teradrake', true), (st - now()) * 1000)));
   // fill the bar with the music
   await new Promise((done) => {
     (function step() {
@@ -842,9 +946,10 @@ async function runXP() {
   timers.forEach(clearTimeout);
 
   // the reveal: flash + fanfare
-  nameEl.classList.remove('sil');
   if (!reduceMotion) { const f = $('#flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); }
-  nameEl.classList.add('evolved');
+  partner.set('teradrake', false);
+  partner.el.classList.add('evolved');
+  partner.el.setAttribute('aria-label', 'Your partner creature, Teradrake');
   const f0 = now() + 0.05;
   [72, 76, 79].forEach((n, i) => tone(midi(n), f0 + i * 0.09, 0.09, { vol: 0.06, dest: bus }));
   tone(midi(84), f0 + 0.27, 0.55, { vol: 0.065, dest: bus });
@@ -858,9 +963,10 @@ async function runXP() {
   $('#xp').classList.add('maxed');
   const age = Number(CONFIG.age);
   label.textContent = age ? `LVL ${age - 1} > LVL ${age}` : 'level++';
-  msg.textContent = age ? `Congratulations! ${N} reached LVL ${age}!` : `Congratulations! ${N} evolved into ${N} 2.0!`;
-  confetti.fromEl($('#xp'), 90);
-  setTimeout(() => nameEl.classList.remove('evolved'), 1000);
+  $('#partner-tag').textContent = `PARTNER · ${B} · LV.${age || 'MAX'}`;
+  msg.textContent = `EVOLUTION COMPLETE: ${A} → ${B}!\nHappy birthday, ${N}. You both leveled up today.`;
+  confetti.fromEl(partner.el, 140);
+  setTimeout(() => partner.el.classList.remove('evolved'), 1000);
   setTimeout(() => achieve('level'), 1400);
 }
 
