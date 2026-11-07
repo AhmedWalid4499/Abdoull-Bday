@@ -4,8 +4,22 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>BIRTHDAY.EXE</title>
-<meta name="description" content="A birthday boot sequence for Player One.">
+<meta name="description" content="Player One, press start.">
 <meta name="theme-color" content="#000000">
+<!-- link preview card (WhatsApp, Discord, iMessage, X...) -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="BIRTHDAY.EXE">
+<meta property="og:title" content="BIRTHDAY.EXE">
+<meta property="og:description" content="Player One, press start. 🎂🎮">
+<meta property="og:url" content="https://ahmedwalid4499.github.io/Abdoull-Bday/">
+<meta property="og:image" content="https://ahmedwalid4499.github.io/Abdoull-Bday/preview.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="A pixel-art dragon with a gaming headset next to the words BIRTHDAY.EXE, Player One, press start">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="BIRTHDAY.EXE">
+<meta name="twitter:description" content="Player One, press start. 🎂🎮">
+<meta name="twitter:image" content="https://ahmedwalid4499.github.io/Abdoull-Bday/preview.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23000'/%3E%3Crect x='3' y='8' width='10' height='6' fill='%23ff5fa2'/%3E%3Crect x='3' y='7' width='10' height='1' fill='%23fff'/%3E%3Crect x='7' y='3' width='2' height='4' fill='%2333ff66'/%3E%3Crect x='7' y='1' width='2' height='2' fill='%23ffd23d'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -358,6 +372,34 @@
     .c-crawl { animation: none; left: 30%; }
   }
 
+  /* ending credits */
+  #credits { position: fixed; inset: 0; z-index: 59; display: none; overflow: hidden; background: #000; user-select: none; -webkit-user-select: none; }
+  #credits.open { display: block; animation: fadeIn 1.4s ease-out; }
+  @keyframes fadeIn { from { opacity: 0; } }
+  .roll { position: absolute; left: 0; right: 0; top: 0; padding: 0 16px; text-align: center; will-change: transform; }
+  .roll section { max-width: 680px; margin: 0 auto 110px; }
+  .roll h3 { font-family: 'Press Start 2P', monospace; font-size: 11px; letter-spacing: 2px; color: var(--cyan); text-shadow: 0 0 6px rgba(41,231,255,.6); margin-bottom: 16px; }
+  .roll p { font-size: 26px; line-height: 1.35; color: #fff; text-shadow: 0 0 6px rgba(255,255,255,.35); }
+  .roll p.dim { color: var(--g); font-size: 22px; }
+  .roll .title { font-family: 'Press Start 2P', monospace; font-size: clamp(22px, 6vw, 46px); line-height: 1.3; color: #fff; text-shadow: 3px 0 var(--pink), -3px 0 var(--cyan); }
+  .roll .credit-name { font-family: 'Press Start 2P', monospace; font-size: clamp(14px, 3.4vw, 22px); color: var(--g); text-shadow: 0 0 10px var(--g); margin-top: 6px; }
+  .roll canvas { image-rendering: pixelated; }
+  .roll .hero-sprite { width: 144px; margin: 26px auto 0; display: block; filter: drop-shadow(0 0 14px rgba(139,92,255,.6)); }
+  .cast { display: flex; flex-wrap: wrap; justify-content: center; gap: 22px 26px; }
+  .cast figure { display: grid; justify-items: center; gap: 8px; }
+  .cast canvas { width: 48px; }
+  .cast figcaption { font-family: 'Press Start 2P', monospace; font-size: 8px; color: #fff; }
+  .score-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px 28px; font-size: 24px; color: #fff; }
+  .score-row b { display: block; font-family: 'Press Start 2P', monospace; font-size: 9px; color: var(--yellow); margin-bottom: 8px; }
+  .final-msg { font-size: 27px; line-height: 1.45; color: #fff; white-space: pre-line; border: 3px solid var(--g); padding: 22px 18px; background: rgba(0,20,8,.7); }
+  .final-msg .sig { display: block; margin-top: 14px; color: var(--yellow); font-family: 'Press Start 2P', monospace; font-size: 12px; }
+  .credits-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; margin-top: 30px; opacity: 0; pointer-events: none; transition: opacity .8s; }
+  #credits.done .credits-actions { opacity: 1; pointer-events: auto; }
+  #credits-skip { position: fixed; top: 14px; right: 14px; z-index: 2; font-size: 10px; padding: 10px 12px; transition: opacity .6s; }
+  #credits.done #credits-skip { opacity: 0; pointer-events: none; }
+  .credits-tip { position: fixed; bottom: 14px; left: 0; right: 0; text-align: center; font-size: 18px; opacity: .55; transition: opacity .6s; }
+  #credits.done .credits-tip { opacity: 0; }
+
   footer { position: relative; }
   footer { margin-top: 40px; text-align: center; display: grid; gap: 16px; justify-items: center; }
   footer .tip { opacity: .65; }
@@ -491,11 +533,18 @@
     </div>
 
     <footer>
+      <button class="btn" id="roll-credits" hidden>&#127916; ROLL CREDITS</button>
       <button class="btn ghost" id="reboot">&#10227; REBOOT</button>
       <div class="tip">psst... try typing <kbd>g</kbd><kbd>g</kbd></div>
       <div class="tip">compiled with &#9829; and zero runtime errors (probably)</div>
     </footer>
   </main>
+
+  <div id="credits" role="dialog" aria-modal="true" aria-label="Ending credits">
+    <button class="btn ghost" id="credits-skip">&#10005; CLOSE</button>
+    <div class="roll" id="roll"></div>
+    <div class="credits-tip">hold anywhere to fast-forward</div>
+  </div>
 
   <div id="toasts" aria-live="polite"></div>
   <div id="flash" aria-hidden="true"></div>
@@ -526,6 +575,14 @@ const CONFIG = {
 May your code compile on the first try, your ping stay low, your loot always be legendary, and every bug turn out to be a feature.
 
 Thanks for being the best co-op partner anyone could ask for. Here's to the next level. GG on another year, legend!`,
+
+  // Your last words in the ending credits (shown after he reaches 100%).
+  creditsMessage:
+`Thanks for playing, Abdoull.
+
+You're not just Player One, you're my favourite co-op partner. Whatever the next level throws at you, I've got your back.
+
+Happy birthday, legend.`,
 
   // Gift in a locked loot chest. The real code is NEVER written here, only an
   // encrypted payload made with:  node tools/encrypt-gift.mjs "<code>" "<answer>"
@@ -901,7 +958,9 @@ function achieve(id) {
     setTimeout(() => {
       toast('&#128081;', '100% COMPLETION', 'True ending unlocked. Happy birthday, ' + playerName + '!');
       sfx.levelUp(); confetti.rain(400); addScore(9999);
+      $('#roll-credits').hidden = false;
     }, 1400);
+    setTimeout(startCredits, 6500);
   }
 }
 
@@ -1660,6 +1719,121 @@ function initCritters() {
 }
 
 /* ---------------------------------------------------------------------
+   ENDING CREDITS: unlocked at 100% completion
+   --------------------------------------------------------------------- */
+// Original calm credits theme: I-vi-IV-V with two alternating melodies
+const CREDIT_CHORDS = [[48, [60, 64, 67]], [45, [57, 60, 64]], [41, [53, 57, 60]], [43, [55, 59, 62]]];
+const CREDIT_MELODIES = [
+  [76, 79, 84, 83, 81, 76, 72, 76, 77, 81, 84, 81, 79, 83, 86, 79],
+  [72, 76, 79, 76, 72, 69, 72, 76, 77, 76, 74, 72, 74, 79, 83, 86],
+];
+let credits = null;
+
+function creditsMusic() {
+  if (!actx) return null;
+  const bus = actx.createGain(); bus.gain.value = 0.9; bus.connect(master);
+  const beat = 0.6, loopLen = beat * 16;
+  let next = now() + 0.3, n = 0;
+  function schedule() {
+    while (next < now() + loopLen + 0.5) {
+      const mel = CREDIT_MELODIES[n % 2], t0 = next;
+      mel.forEach((m, i) => {
+        tone(midi(m), t0 + i * beat, beat * 0.9, { type: 'triangle', vol: 0.07, attack: 0.02, release: 0.15, dest: bus });
+        tone(midi(m), t0 + i * beat, beat * 0.5, { type: 'square', vol: 0.018, dest: bus });
+      });
+      CREDIT_CHORDS.forEach(([root, ch], bar) => {
+        const s = t0 + bar * 4 * beat;
+        tone(midi(root), s, beat * 1.9, { type: 'triangle', vol: 0.17, dest: bus });
+        tone(midi(root), s + 2 * beat, beat * 1.9, { type: 'triangle', vol: 0.14, dest: bus });
+        for (let e = 0; e < 8; e++) tone(midi(ch[e % 3] + 12), s + e * beat / 2, beat / 2 * 0.8, { type: 'square', vol: 0.016, dest: bus });
+      });
+      next += loopLen; n++;
+    }
+  }
+  schedule();
+  const timer = setInterval(schedule, 1000);
+  return { stop() { clearInterval(timer); bus.gain.setTargetAtTime(0, now(), 0.5); setTimeout(() => bus.disconnect(), 3000); } };
+}
+
+function buildCredits() {
+  const N = playerName.toUpperCase(), Y = CONFIG.fromName;
+  const roll = $('#roll');
+  roll.innerHTML = `
+    <section><div class="title">BIRTHDAY.EXE</div><canvas class="hero-sprite" id="cr-hero"></canvas></section>
+    <section><h3>STARRING</h3><p class="credit-name"></p><p class="dim">as Player One</p></section>
+    <section><h3>DIRECTED BY</h3><p class="credit-name"></p></section>
+    <section><h3>PARTNER CREATURE</h3><p class="credit-name">TERADRAKE</p><p class="dim">formerly known as BYTLING</p></section>
+    <section><h3>SUPPORTING CAST</h3><div class="cast" id="cr-cast"></div></section>
+    <section><h3>MUSIC</h3>
+      <p>Happy Birthday<br><span class="dim">traditional, 8-bit arrangement</span></p><br>
+      <p>Evolution Theme<br><span class="dim">original composition</span></p><br>
+      <p>Credits Theme<br><span class="dim">original composition</span></p></section>
+    <section><h3>SPECIAL THANKS</h3><p>Coffee &#9749;</p><p>Late nights &amp; rubber ducks</p><p>Every bug that turned out to be a feature</p><p class="dim">0 bugs in this program (we hope)</p></section>
+    <section><h3>FINAL STATS</h3><div class="score-row" id="cr-stats"></div></section>
+    <section><h3>A MESSAGE FROM ${Y}</h3><div class="final-msg"><span id="cr-msg"></span><span class="sig"></span></div></section>
+    <section id="cr-final"><div class="title">THANK YOU<br>FOR PLAYING</div><p class="credit-name" id="cr-hbd"></p>
+      <div class="credits-actions"><button class="btn" id="cr-replay">&#10227; PLAY AGAIN</button><button class="btn ghost" id="cr-close">&#10005; CLOSE</button></div></section>`;
+  const names = roll.querySelectorAll('.credit-name');
+  names[0].textContent = N; names[1].textContent = Y;
+  roll.querySelector('.sig').textContent = '- ' + Y;
+  $('#cr-msg').textContent = CONFIG.creditsMessage;
+  $('#cr-hbd').textContent = `HAPPY BIRTHDAY, ${N}!`;
+  drawSprite($('#cr-hero'), CREATURES.teradrake);
+  for (const cr of CRITTERS) {
+    const fig = document.createElement('figure'), cv = document.createElement('canvas'), cap = document.createElement('figcaption');
+    drawSprite(cv, cr); cap.textContent = cr.name; fig.append(cv, cap); $('#cr-cast').appendChild(fig);
+  }
+  const stats = [['SCORE', String(score).padStart(7, '0')], ['LIVES LEFT', $('.hud .hp').textContent],
+    ['ACHIEVEMENTS', `${unlocked.size}/${ACHIEVEMENTS.length}`], ['CRITTERS', `${found.size}/${CRITTERS.length}`]];
+  $('#cr-stats').innerHTML = stats.map(([k]) => `<div><b>${k}</b><span></span></div>`).join('');
+  $('#cr-stats').querySelectorAll('span').forEach((s, i) => { s.textContent = stats[i][1]; });
+  $('#cr-replay').addEventListener('click', () => location.reload());
+  $('#cr-close').addEventListener('click', closeCredits);
+}
+
+function startCredits() {
+  if (credits) return;
+  initAudio();
+  if (song) stopSong();
+  buildCredits();
+  const box = $('#credits'), roll = $('#roll'), fin = $('#cr-final');
+  box.classList.remove('done'); box.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  let pos = innerHeight, last = performance.now(), fast = false, raf;
+  const stopAt = () => -(fin.offsetTop + fin.offsetHeight / 2 - innerHeight / 2);
+  const speedUp = () => { fast = true; }, slowDown = () => { fast = false; };
+  box.addEventListener('pointerdown', speedUp); addEventListener('pointerup', slowDown); addEventListener('pointercancel', slowDown);
+  function step(t) {
+    const dt = Math.min(0.05, (t - last) / 1000); last = t;
+    pos -= (fast ? 260 : 48) * dt;
+    const end = stopAt();
+    if (pos <= end) {
+      pos = end; roll.style.transform = `translateY(${pos}px)`;
+      box.classList.add('done'); confetti.rain(160); sfx.levelUp();
+      setTimeout(() => credits && credits.music && credits.music.stop(), 9000);
+      $('#cr-replay').focus({ preventScroll: true });
+      return;
+    }
+    roll.style.transform = `translateY(${pos}px)`;
+    raf = requestAnimationFrame(step);
+  }
+  raf = requestAnimationFrame(step);
+  credits = {
+    music: creditsMusic(),
+    cleanup() { cancelAnimationFrame(raf); box.removeEventListener('pointerdown', speedUp); removeEventListener('pointerup', slowDown); removeEventListener('pointercancel', slowDown); },
+  };
+}
+
+function closeCredits() {
+  if (!credits) return;
+  credits.cleanup();
+  if (credits.music) credits.music.stop();
+  credits = null;
+  $('#credits').classList.remove('open', 'done');
+  document.body.style.overflow = '';
+}
+
+/* ---------------------------------------------------------------------
    ENTER PARTY
    --------------------------------------------------------------------- */
 function onVisible(el, fn, delay = 0) {
@@ -1720,6 +1894,9 @@ async function enterParty(name, lives = CONFIG.lives) {
 buildEQ();
 $('#play').addEventListener('click', playSong);
 $('#reboot').addEventListener('click', () => location.reload());
+$('#roll-credits').addEventListener('click', startCredits);
+$('#credits-skip').addEventListener('click', closeCredits);
+addEventListener('keydown', (e) => { if (e.key === 'Escape') closeCredits(); });
 
 (function gate() {
   const g = $('#gate');
