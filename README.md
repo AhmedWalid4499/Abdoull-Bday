@@ -19,7 +19,7 @@ Open `index.html` and edit the `CONFIG` block at the top of the `<script>`:
 ```js
 const CONFIG = {
   age: null,            // e.g. 21 shows "LVL 20 > LVL 21"
-  fromName: 'PLAYER 2', // who the message is from
+  fromName: 'YUTO',     // who the message is from
   message: `...`,       // your birthday message
 };
 ```
