@@ -153,6 +153,16 @@
   .xp.maxed .xp-fill { background: repeating-linear-gradient(90deg, var(--yellow) 0 12px, #e0b800 12px 15px); box-shadow: 0 0 14px var(--yellow); }
   @keyframes pulse { 50% { box-shadow: 0 0 24px var(--yellow); } }
 
+  /* evolution sequence */
+  .player-name { transition: color .05s, text-shadow .05s; }
+  .player-name.sil { color: #fff; text-shadow: 0 0 18px #fff, 0 0 42px rgba(255,255,255,.8); }
+  .player-name.evolved { animation: evoPop .9s ease-out; }
+  @keyframes evoPop { 0% { transform: scale(1.35); filter: brightness(3); } 100% { transform: none; filter: none; } }
+  .evo-msg { margin-top: 18px; min-height: 1.3em; color: #fff; font-size: clamp(20px, 3.4vw, 26px); text-shadow: 0 0 8px rgba(255,255,255,.5); }
+  #flash { position: fixed; inset: 0; z-index: 58; background: #fff; opacity: 0; pointer-events: none; }
+  #flash.go { animation: flash 1.2s ease-out; }
+  @keyframes flash { 0% { opacity: 0; } 8% { opacity: 1; } 100% { opacity: 0; } }
+
   .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); gap: 22px; margin-top: 30px; }
   .card {
     position: relative; padding: 20px 18px;
@@ -337,6 +347,7 @@
         <div class="xp-head pixel"><span>XP</span><span id="xp-label">LOADING...</span></div>
         <div class="xp-bar"><div class="xp-fill" id="xp-fill"></div></div>
       </div>
+      <div class="evo-msg" id="evo-msg" aria-live="polite"></div>
     </section>
 
     <div class="grid">
@@ -404,6 +415,7 @@
   </main>
 
   <div id="toasts" aria-live="polite"></div>
+  <div id="flash" aria-hidden="true"></div>
   <canvas id="confetti" aria-hidden="true"></canvas>
   <div class="crt" aria-hidden="true"></div>
 
@@ -773,21 +785,83 @@ function achieve(id) {
   }
 }
 
-/* XP bar */
+/* XP bar: "evolution" sequence. Original music: an accelerating minor-key
+   arpeggio climbing over Am-F-G-E, then a white flash and a major fanfare. */
+const midi = (n) => 440 * Math.pow(2, (n - 69) / 12);
+const EVO_BARS = [
+  // [bass, arpeggio, lead, bar length in seconds]: bars get shorter, so it speeds up
+  [45, [57, 60, 64, 69], 76, 1.00],
+  [41, [53, 57, 60, 65], 77, 0.90],
+  [43, [55, 59, 62, 67], 79, 0.80],
+  [40, [52, 56, 59, 64], 80, 0.70],
+  [45, [57, 60, 64, 69], 81, 0.60],
+  [41, [53, 57, 60, 65], 84, 0.50],
+  [43, [55, 59, 62, 67], 86, 0.44],
+  [40, [52, 56, 59, 64], 88, 0.40],
+];
+const ARP_ORDER = [0, 1, 2, 3, 2, 1, 2, 3];
+
 async function runXP() {
-  const fill = $('#xp-fill'), label = $('#xp-label');
-  label.textContent = 'GAINING XP...';
-  for (let p = 0; p <= 100; p += 2) {
-    fill.style.width = p + '%';
-    if (p % 6 === 0) sfx.tick(p / 4);
-    await sleep(28 + p * 0.35);
+  const fill = $('#xp-fill'), label = $('#xp-label'), msg = $('#evo-msg');
+  const nameEl = $('.player-name'), N = playerName.toUpperCase();
+  if (!actx) initAudio();
+  label.textContent = 'EVOLVING...';
+  msg.textContent = `!! ${N} IS EVOLVING !!`;
+
+  const bus = actx ? actx.createGain() : null;
+  if (bus) bus.connect(master);
+  const t0 = now() + 0.1;
+  const flips = [];
+  let t = 0;
+  for (const [bass, arp, lead, len] of EVO_BARS) {
+    const s = t0 + t;
+    tone(midi(bass), s, len * 0.95, { type: 'triangle', vol: 0.2, dest: bus });
+    tone(midi(lead), s, len * 0.9, { type: 'square', vol: 0.045, attack: 0.03, release: 0.1, dest: bus });
+    tone(midi(lead) * 1.003, s, len * 0.9, { type: 'triangle', vol: 0.04, attack: 0.03, release: 0.1, dest: bus });
+    ARP_ORDER.forEach((k, i) => {
+      const st = s + (len / 8) * i;
+      tone(midi(arp[k] + 12), st, len / 8 * 0.8, { type: 'square', vol: 0.035, dest: bus });
+      if (i % 2 === 0) flips.push(st);
+    });
+    noise(s, 0.06, { vol: 0.04, freq: 6000, type: 'highpass', dest: bus });
+    t += len;
   }
+  const build = t, end = t0 + build;
+
+  // flicker the name in time with the music
+  const timers = [];
+  if (!reduceMotion) flips.forEach((st, i) => timers.push(setTimeout(() => nameEl.classList.toggle('sil', i % 2 === 0), (st - now()) * 1000)));
+  // fill the bar with the music
+  await new Promise((done) => {
+    (function step() {
+      const k = Math.min(1, Math.max(0, (now() - t0) / build));
+      fill.style.width = (k * 100) + '%';
+      if (k < 1) requestAnimationFrame(step); else done();
+    })();
+  });
+  timers.forEach(clearTimeout);
+
+  // the reveal: flash + fanfare
+  nameEl.classList.remove('sil');
+  if (!reduceMotion) { const f = $('#flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); }
+  nameEl.classList.add('evolved');
+  const f0 = now() + 0.05;
+  [72, 76, 79].forEach((n, i) => tone(midi(n), f0 + i * 0.09, 0.09, { vol: 0.06, dest: bus }));
+  tone(midi(84), f0 + 0.27, 0.55, { vol: 0.065, dest: bus });
+  tone(midi(81), f0 + 0.85, 0.12, { vol: 0.06, dest: bus });
+  tone(midi(83), f0 + 0.98, 0.12, { vol: 0.06, dest: bus });
+  tone(midi(84), f0 + 1.11, 1.0, { vol: 0.065, release: 0.3, dest: bus });
+  [60, 64, 67].forEach((n) => tone(midi(n), f0 + 1.11, 1.0, { type: 'triangle', vol: 0.04, release: 0.3, dest: bus }));
+  tone(midi(36), f0 + 1.11, 1.0, { type: 'triangle', vol: 0.22, release: 0.3, dest: bus });
+  [0.27, 1.11].forEach((d) => noise(f0 + d, 0.25, { vol: 0.06, freq: 5000, type: 'highpass', dest: bus }));
+
   $('#xp').classList.add('maxed');
   const age = Number(CONFIG.age);
   label.textContent = age ? `LVL ${age - 1} > LVL ${age}` : 'level++';
-  sfx.levelUp();
-  confetti.fromEl($('#xp'), 70);
-  achieve('level');
+  msg.textContent = age ? `Congratulations! ${N} reached LVL ${age}!` : `Congratulations! ${N} evolved into ${N} 2.0!`;
+  confetti.fromEl($('#xp'), 90);
+  setTimeout(() => nameEl.classList.remove('evolved'), 1000);
+  setTimeout(() => achieve('level'), 1400);
 }
 
 /* stats */
