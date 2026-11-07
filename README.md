@@ -13,7 +13,7 @@ A retro terminal and 8-bit gaming birthday website. It's a single `index.html` f
    - 🎁 **Loot chest**: a gift card code, encrypted and unlocked only by answering a question
    - 🔍 **Hidden Critters Hunt**: 6 tiny critters hidden around the page, plus a critter log
    - 8 achievements and a score (secret: type `gg`)
-5. At **100% completion**, ending credits roll with an original credits theme and a final message.
+5. At **100% completion**, ending credits roll with an original credits theme.
 
 ## Personalise it
 Edit the `CONFIG` block at the top of the `<script>` in `index.html`:
@@ -25,7 +25,6 @@ const CONFIG = {
   age: null,                  // e.g. 21 shows "LVL 20 > LVL 21"
   fromName: 'YUTO',           // who the messages are from
   message: `...`,             // the "incoming transmission" message
-  creditsMessage: `...`,      // the last message in the ending credits
   gift: { ... },              // loot chest (see below)
 };
 ```

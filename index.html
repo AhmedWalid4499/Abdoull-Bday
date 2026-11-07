@@ -391,8 +391,6 @@
   .cast figcaption { font-family: 'Press Start 2P', monospace; font-size: 8px; color: #fff; }
   .score-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px 28px; font-size: 24px; color: #fff; }
   .score-row b { display: block; font-family: 'Press Start 2P', monospace; font-size: 9px; color: var(--yellow); margin-bottom: 8px; }
-  .final-msg { font-size: 27px; line-height: 1.45; color: #fff; white-space: pre-line; border: 3px solid var(--g); padding: 22px 18px; background: rgba(0,20,8,.7); }
-  .final-msg .sig { display: block; margin-top: 14px; color: var(--yellow); font-family: 'Press Start 2P', monospace; font-size: 12px; }
   .credits-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; margin-top: 30px; opacity: 0; pointer-events: none; transition: opacity .8s; }
   #credits.done .credits-actions { opacity: 1; pointer-events: auto; }
   #credits-skip { position: fixed; top: 14px; right: 14px; z-index: 2; font-size: 10px; padding: 10px 12px; transition: opacity .6s; }
@@ -575,14 +573,6 @@ const CONFIG = {
 May your code compile on the first try, your ping stay low, your loot always be legendary, and every bug turn out to be a feature.
 
 Thanks for being the best co-op partner anyone could ask for. Here's to the next level. GG on another year, legend!`,
-
-  // Your last words in the ending credits (shown after he reaches 100%).
-  creditsMessage:
-`Thanks for playing, Abdoull.
-
-You're not just Player One, you're my favourite co-op partner. Whatever the next level throws at you, I've got your back.
-
-Happy birthday, legend.`,
 
   // Gift in a locked loot chest. The real code is NEVER written here, only an
   // encrypted payload made with:  node tools/encrypt-gift.mjs "<code>" "<answer>"
@@ -1770,13 +1760,10 @@ function buildCredits() {
       <p>Credits Theme<br><span class="dim">original composition</span></p></section>
     <section><h3>SPECIAL THANKS</h3><p>Coffee &#9749;</p><p>Late nights &amp; rubber ducks</p><p>Every bug that turned out to be a feature</p><p class="dim">0 bugs in this program (we hope)</p></section>
     <section><h3>FINAL STATS</h3><div class="score-row" id="cr-stats"></div></section>
-    <section><h3>A MESSAGE FROM ${Y}</h3><div class="final-msg"><span id="cr-msg"></span><span class="sig"></span></div></section>
     <section id="cr-final"><div class="title">THANK YOU<br>FOR PLAYING</div><p class="credit-name" id="cr-hbd"></p>
       <div class="credits-actions"><button class="btn" id="cr-replay">&#10227; PLAY AGAIN</button><button class="btn ghost" id="cr-close">&#10005; CLOSE</button></div></section>`;
   const names = roll.querySelectorAll('.credit-name');
   names[0].textContent = N; names[1].textContent = Y;
-  roll.querySelector('.sig').textContent = '- ' + Y;
-  $('#cr-msg').textContent = CONFIG.creditsMessage;
   $('#cr-hbd').textContent = `HAPPY BIRTHDAY, ${N}!`;
   drawSprite($('#cr-hero'), CREATURES.teradrake);
   for (const cr of CRITTERS) {
