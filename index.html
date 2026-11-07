@@ -248,6 +248,37 @@
   @keyframes toastIn { from { transform: translateX(120%); } to { transform: none; } }
   @keyframes toastOut { to { transform: translateX(120%); opacity: 0; } }
 
+  /* loot chest */
+  .loot { display: grid; grid-template-columns: minmax(0, 260px) 1fr; gap: 24px; align-items: center; }
+  .chest-wrap { position: relative; display: grid; place-items: center; padding: 14px; }
+  #chest { position: relative; z-index: 1; width: 100%; max-width: 240px; image-rendering: pixelated; }
+  .rays {
+    position: absolute; inset: -12%; border-radius: 50%; opacity: 0; transition: opacity .8s;
+    background: repeating-conic-gradient(from 0deg, rgba(255,224,61,.38) 0 10deg, transparent 10deg 30deg);
+    -webkit-mask: radial-gradient(circle, #000 18%, transparent 66%); mask: radial-gradient(circle, #000 18%, transparent 66%);
+    animation: spin 9s linear infinite;
+  }
+  .chest-wrap.open .rays { opacity: 1; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loot-q .ps1 { color: var(--yellow); }
+  .loot-row { display: flex; gap: 10px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
+  .loot-row input {
+    flex: 1; min-width: 160px; background: #000; color: var(--g); text-shadow: inherit;
+    border: 3px solid var(--g); font: inherit; font-size: 22px; padding: 8px 10px; outline: none;
+  }
+  .loot-row input:focus { border-color: var(--yellow); }
+  .loot-row .btn:disabled { opacity: .6; cursor: wait; }
+  .loot-msg { min-height: 1.3em; margin-top: 12px; }
+  .loot-title { color: var(--yellow); font-size: clamp(12px, 2.6vw, 16px); text-shadow: 0 0 10px var(--yellow); }
+  .loot-label { margin-top: 10px; color: #fff; }
+  .code-box {
+    font-family: 'Press Start 2P', monospace; font-size: clamp(13px, 3.2vw, 22px); letter-spacing: 2px; line-height: 1.5;
+    color: #fff; text-align: center; word-break: break-all; user-select: all;
+    border: 3px dashed var(--yellow); background: rgba(255,224,61,.06); padding: 18px 12px; margin: 14px 0 16px;
+  }
+  .redeem { margin-top: 14px; opacity: .8; font-size: 20px; }
+  @media (max-width: 640px) { .loot { grid-template-columns: 1fr; } .chest-wrap { max-width: 240px; margin: 0 auto; } }
+
   footer { margin-top: 40px; text-align: center; display: grid; gap: 16px; justify-items: center; }
   footer .tip { opacity: .65; }
   kbd { font-family: inherit; border: 2px solid var(--g); padding: 0 6px; }
@@ -341,6 +372,24 @@
         <div class="msg-sign pixel" id="msg-sign"></div>
       </section>
 
+      <section class="card span" id="loot-card" hidden>
+        <h2><span>&#127873; LOOT_CHEST.dat</span><small id="loot-status">LOCKED &middot; AES-256</small></h2>
+        <div class="loot">
+          <div class="chest-wrap" id="chest-wrap"><div class="rays"></div><canvas id="chest" width="192" height="160" aria-hidden="true"></canvas></div>
+          <div id="loot-side">
+            <p>A legendary item has dropped for <span data-name></span>. Only the real player can open it.</p>
+            <form id="loot-form" autocomplete="off">
+              <label for="loot-answer" class="loot-q"><span class="ps1">SECURITY CHECK:</span> <span id="loot-q"></span></label>
+              <div class="loot-row">
+                <input id="loot-answer" type="text" spellcheck="false" autocomplete="off" enterkeyhint="go" placeholder="your answer">
+                <button class="btn" type="submit" id="loot-btn">UNLOCK</button>
+              </div>
+            </form>
+            <div class="loot-msg" id="loot-msg" aria-live="polite"></div>
+          </div>
+        </div>
+      </section>
+
       <section class="card span">
         <h2><span>&#127942; ACHIEVEMENTS</span><small id="ach-count">0/6</small></h2>
         <div class="ach-list" id="ach-list"></div>
@@ -376,6 +425,17 @@ const CONFIG = {
 May your code compile on the first try, your ping stay low, your loot always be legendary, and every bug turn out to be a feature.
 
 Thanks for being the best co-op partner anyone could ask for. Here's to the next level. GG on another year, legend!`,
+
+  // Gift in a locked loot chest. The real code is NEVER written here, only an
+  // encrypted payload made with:  node tools/encrypt-gift.mjs "<code>" "<answer>"
+  // Leave payload as null to hide the chest.
+  gift: {
+    label: 'PLAYSTATION STORE GIFT CARD',
+    value: '',          // e.g. '$50' (optional)
+    question: '',       // something only he knows the answer to
+    hint: '',           // shown after 3 wrong tries (optional)
+    payload: null,
+  },
 };
 /* ===================================================================== */
 
@@ -671,7 +731,8 @@ const ACHIEVEMENTS = [
   { id: 'wish',   ico: '&#127874;', name: 'WISH.EXE',       desc: 'Blew out every candle',                    pts: 3000 },
   { id: 'reader', ico: '&#128225;', name: 'MESSAGE READ',   desc: 'Received the transmission from ' + CONFIG.fromName, pts: 1000 },
   { id: 'gg',     ico: '&#129309;', name: 'GG WP',          desc: 'Found the secret command',                 pts: 4200 },
-];
+  { id: 'loot',   ico: '&#127873;', name: 'LEGENDARY LOOT', desc: 'Opened the loot chest',                    pts: 5000 },
+].filter((a) => a.id !== 'loot' || (CONFIG.gift && CONFIG.gift.payload));
 const unlocked = new Set();
 let toastChain = Promise.resolve();
 
@@ -1026,6 +1087,103 @@ const cake = (() => {
 })();
 
 /* ---------------------------------------------------------------------
+   LOOT CHEST: gift code is AES-GCM encrypted; key = PBKDF2(answer)
+   --------------------------------------------------------------------- */
+const normAnswer = (s) => s.normalize('NFKC').trim().toLowerCase().replace(/\s+/g, ' ');
+
+async function decryptGift(answer, p) {
+  const b = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+  const enc = new TextEncoder();
+  const base = await crypto.subtle.importKey('raw', enc.encode(normAnswer(answer)), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt: b(p.salt), iterations: p.iter, hash: 'SHA-256' },
+    base, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+  const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b(p.iv) }, key, b(p.ct));
+  return new TextDecoder().decode(pt);
+}
+
+function drawChest(open) {
+  const c = $('#chest').getContext('2d'), PX = 8;
+  const R = (x, y, w, h, col) => { c.fillStyle = col; c.fillRect(x * PX, y * PX, w * PX, h * PX); };
+  c.clearRect(0, 0, 192, 160);
+  const wood = '#a85a26', dark = '#6b3612', gold = '#ffd23d', goldD = '#c99a12';
+  // body
+  R(2, 11, 20, 8, wood); R(2, 15, 20, 1, dark); R(2, 18, 20, 1, '#4a240b');
+  R(2, 11, 2, 8, gold); R(20, 11, 2, 8, gold); R(2, 18, 20, 1, goldD);
+  if (!open) {
+    R(3, 5, 18, 1, wood); R(2, 6, 20, 4, wood); R(2, 8, 20, 1, dark);
+    R(2, 6, 2, 4, gold); R(20, 6, 2, 4, gold); R(2, 10, 20, 1, gold); R(4, 5, 16, 1, '#c06a2e');
+    R(10, 9, 4, 5, gold); R(11, 10, 2, 1, '#222'); R(11, 11, 1, 2, '#222');
+  } else {
+    // lid swung back
+    R(3, 2, 18, 1, wood); R(2, 3, 20, 3, dark); R(2, 3, 2, 3, gold); R(20, 3, 2, 3, gold);
+    // treasure
+    R(4, 10, 16, 1, '#2a1405');
+    [[5,9],[7,8],[8,9],[10,8],[11,7],[12,8],[14,9],[15,8],[17,9],[18,9],[9,10],[13,10],[16,10],[6,10]].forEach(([x, y]) => R(x, y, 1, 1, gold));
+    [[7,7],[12,6],[15,7]].forEach(([x, y]) => R(x, y, 1, 1, '#fff6b0'));
+    R(10, 7, 1, 1, '#29e7ff'); R(16, 8, 1, 1, '#ff5fa2');
+    R(2, 10, 20, 1, gold);
+  }
+}
+
+function initLoot() {
+  const g = CONFIG.gift;
+  if (!g || !g.payload) return;
+  $('#loot-card').hidden = false;
+  $('#loot-q').textContent = g.question;
+  drawChest(false);
+  let tries = 0;
+  const msg = $('#loot-msg'), btn = $('#loot-btn'), input = $('#loot-answer');
+
+  $('#loot-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    initAudio();
+    if (!input.value.trim()) { input.focus(); return; }
+    if (!(window.crypto && crypto.subtle)) { msg.className = 'loot-msg err'; msg.textContent = 'ERR: open this page over https to unlock.'; return; }
+    btn.disabled = true; btn.textContent = 'DECRYPTING...'; msg.className = 'loot-msg'; msg.textContent = '';
+    try {
+      const code = await decryptGift(input.value, g.payload);
+      revealLoot(code);
+    } catch {
+      tries++;
+      sfx.error();
+      const w = $('#chest-wrap'); w.classList.remove('shake'); void w.offsetWidth; w.classList.add('shake');
+      msg.className = 'loot-msg err';
+      msg.textContent = `ACCESS DENIED. That's not what the real player would say. (attempt ${tries})`;
+      if (tries >= 3 && g.hint) msg.textContent += `  HINT: ${g.hint}`;
+      btn.disabled = false; btn.textContent = 'UNLOCK';
+      input.select();
+    }
+  });
+}
+
+async function revealLoot(code) {
+  const g = CONFIG.gift;
+  $('#loot-status').textContent = 'UNLOCKED';
+  drawChest(true);
+  $('#chest-wrap').classList.add('open');
+  sfx.levelUp();
+  confetti.fromEl($('#chest'), 180);
+  const side = $('#loot-side');
+  side.innerHTML = `
+    <div class="loot-title pixel">&#9733; LEGENDARY LOOT &#9733;</div>
+    <div class="loot-label"></div>
+    <div class="code-box" id="gift-code" aria-label="Gift card code"></div>
+    <button class="btn" id="copy-code">COPY CODE</button>
+    <p class="redeem">Redeem it in the PlayStation Store &rarr; Redeem Code.</p>`;
+  side.querySelector('.loot-label').textContent = g.label + (g.value ? '  ·  ' + g.value : '');
+  const box = $('#gift-code');
+  for (const ch of code) { box.textContent += ch; tone(rand(700, 1200), now(), 0.03, { vol: 0.04 }); await sleep(70); }
+  sfx.coin();
+  $('#copy-code').addEventListener('click', async (e) => {
+    try { await navigator.clipboard.writeText(code); e.target.textContent = 'COPIED ✓'; }
+    catch { getSelection().selectAllChildren(box); e.target.textContent = 'SELECTED, PRESS CTRL+C'; }
+    sfx.ok();
+  });
+  achieve('loot');
+}
+
+/* ---------------------------------------------------------------------
    ENTER PARTY
    --------------------------------------------------------------------- */
 function onVisible(el, fn, delay = 0) {
@@ -1048,7 +1206,7 @@ async function enterParty(name) {
   $('#msg-body').textContent = CONFIG.message;
   $('#msg-from').textContent = 'FROM: ' + CONFIG.fromName;
   $('#msg-sign').textContent = '- ' + CONFIG.fromName;
-  renderLyrics(); renderStats(); renderAchievements();
+  renderLyrics(); renderStats(); renderAchievements(); initLoot();
 
   const party = $('#party');
   party.style.display = 'block';
@@ -1069,7 +1227,7 @@ async function enterParty(name) {
   // secret: type "gg"
   let buf = '';
   addEventListener('keydown', (e) => {
-    if (e.key.length !== 1) return;
+    if (e.key.length !== 1 || (e.target.matches && e.target.matches('input, textarea'))) return;
     buf = (buf + e.key.toLowerCase()).slice(-2);
     if (buf === 'gg') {
       buf = '';
