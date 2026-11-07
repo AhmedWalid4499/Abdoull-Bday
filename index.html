@@ -296,6 +296,54 @@
   .redeem { margin-top: 14px; opacity: .8; font-size: 20px; }
   @media (max-width: 640px) { .loot { grid-template-columns: 1fr; } .chest-wrap { max-width: 240px; margin: 0 auto; } }
 
+  /* hidden critters */
+  .critter {
+    position: absolute; z-index: 5; padding: 6px; line-height: 0;
+    background: none; border: 0; cursor: pointer; -webkit-tap-highlight-color: transparent;
+  }
+  .critter canvas { width: 30px; image-rendering: pixelated; display: block; }
+  .critter:focus-visible { outline: 2px dashed var(--yellow); }
+  .critter.caught { animation: caught .55s ease-in forwards !important; pointer-events: none; }
+  @keyframes caught {
+    40%  { transform: scale(1.9) translateY(-10px); filter: brightness(3); }
+    100% { transform: scale(0) translateY(-34px); opacity: 0; }
+  }
+  .c-hop   { animation: hop 4.2s infinite; }
+  @keyframes hop { 0%, 86%, 100% { transform: none; } 90% { transform: translateY(-7px); } 94% { transform: none; } 97% { transform: translateY(-3px); } }
+  .c-float { animation: float 3.2s ease-in-out infinite; opacity: .4; }
+  @keyframes float { 50% { transform: translateY(-7px); } }
+  .c-peek  { animation: peek 5s ease-in-out infinite; }
+  @keyframes peek { 0%, 100% { transform: translateX(0); } 45%, 60% { transform: translateX(-12px) rotate(-8deg); } }
+  .c-swing { transform-origin: top center; animation: swing 3s ease-in-out infinite; }
+  .c-swing canvas { transform: rotate(180deg); }
+  @keyframes swing { 0%, 100% { transform: rotate(-9deg); } 50% { transform: rotate(9deg); } }
+  .c-crawl { animation: crawl 50s linear infinite; }
+  @keyframes crawl {
+    0%   { left: 6px; transform: none; }
+    49%  { left: calc(100% - 46px); transform: none; }
+    50%  { left: calc(100% - 46px); transform: scaleX(-1); }
+    99%  { left: 6px; transform: scaleX(-1); }
+    100% { left: 6px; transform: none; }
+  }
+  .c-glitch { animation: glitchy 2.6s steps(1) infinite; filter: drop-shadow(2px 0 rgba(255,95,162,.85)) drop-shadow(-2px 0 rgba(41,231,255,.85)); }
+  @keyframes glitchy {
+    0% { transform: none; opacity: 1; } 68% { transform: translate(3px, -1px); } 70% { transform: translate(-3px, 1px); opacity: .35; }
+    72% { transform: none; opacity: 1; } 88% { opacity: 0; } 91% { opacity: 1; }
+  }
+  .critter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 14px; }
+  .cslot { display: grid; justify-items: center; align-content: start; gap: 8px; padding: 14px 10px; text-align: center; border: 2px solid var(--g-dim); }
+  .cslot canvas { width: 54px; image-rendering: pixelated; }
+  .cslot b { font-family: 'Press Start 2P', monospace; font-size: 9px; color: #fff; }
+  .cslot span { font-size: 18px; line-height: 1.2; opacity: .75; }
+  .cslot.got { border-color: var(--cyan); box-shadow: 0 0 10px rgba(41,231,255,.25); }
+  .cslot.got b { color: var(--cyan); text-shadow: 0 0 6px rgba(41,231,255,.6); }
+  .cslot.got span { opacity: 1; }
+  @media (prefers-reduced-motion: reduce) {
+    .c-hop, .c-float, .c-peek, .c-swing, .c-glitch { animation: none; }
+    .c-crawl { animation: none; left: 30%; }
+  }
+
+  footer { position: relative; }
   footer { margin-top: 40px; text-align: center; display: grid; gap: 16px; justify-items: center; }
   footer .tip { opacity: .65; }
   kbd { font-family: inherit; border: 2px solid var(--g); padding: 0 6px; }
@@ -413,7 +461,13 @@
         </div>
       </section>
 
-      <section class="card span">
+      <section class="card span" id="critter-card">
+        <h2><span>&#128269; CRITTER_LOG.db</span><small id="critter-count">0/6 FOUND</small></h2>
+        <p>6 wild critters are hiding somewhere on this page. Click them to add them to your log!</p>
+        <div class="critter-grid" id="critter-grid"></div>
+      </section>
+
+      <section class="card span" id="ach-card">
         <h2><span>&#127942; ACHIEVEMENTS</span><small id="ach-count">0/6</small></h2>
         <div class="ach-list" id="ach-list"></div>
       </section>
@@ -532,6 +586,7 @@ const sfx = {
   puff()    { noise(now(), 0.4, { vol: 0.18, freq: 900, q: 0.4, type: 'lowpass' }); },
   lifeLost(){ tone(660, now(), 0.12, { vol: 0.07 }); tone(440, now() + 0.12, 0.12, { vol: 0.07 }); tone(220, now() + 0.24, 0.3, { type: 'sawtooth', vol: 0.06 }); },
   gameOver(){ [523.25, 440, 349.23, 261.63].forEach((f, i) => tone(f, now() + i * 0.22, 0.2, { vol: 0.07 })); tone(130.8, now() + 0.9, 0.8, { type: 'sawtooth', vol: 0.06, slideTo: 60 }); },
+  catch()   { tone(700, now(), 0.12, { vol: 0.07, slideTo: 1600 }); tone(1568, now() + 0.12, 0.08, { vol: 0.05, type: 'triangle' }); tone(2093, now() + 0.2, 0.18, { vol: 0.05, type: 'triangle' }); },
   powerOff(){ tone(900, now(), 0.5, { type: 'sine', vol: 0.08, slideTo: 40 }); },
   powerOn() { tone(60, now(), 0.45, { type: 'sine', vol: 0.08, slideTo: 1200 }); noise(now() + 0.1, 0.25, { vol: 0.05, freq: 5000 }); },
 };
@@ -790,6 +845,7 @@ const ACHIEVEMENTS = [
   { id: 'wish',   ico: '&#127874;', name: 'WISH.EXE',       desc: 'Blew out every candle',                    pts: 3000 },
   { id: 'reader', ico: '&#128225;', name: 'MESSAGE READ',   desc: 'Received the transmission from ' + CONFIG.fromName, pts: 1000 },
   { id: 'gg',     ico: '&#129309;', name: 'GG WP',          desc: 'Found the secret command',                 pts: 4200 },
+  { id: 'critters', ico: '&#128269;', name: 'CRITTER MASTER', desc: 'Found all 6 hidden critters',          pts: 6000 },
   { id: 'loot',   ico: '&#127873;', name: 'LEGENDARY LOOT', desc: 'Opened the loot chest',                    pts: 5000 },
 ].filter((a) => a.id !== 'loot' || (CONFIG.gift && CONFIG.gift.payload));
 const unlocked = new Set();
@@ -1419,6 +1475,115 @@ async function revealLoot(code) {
 }
 
 /* ---------------------------------------------------------------------
+   HIDDEN CRITTERS HUNT: six original critters hidden around the page.
+   Sprites use `half` (mirrored) or full `rows`. '.' = transparent.
+   --------------------------------------------------------------------- */
+const CRITTERS = [
+  {
+    id: 'bitbug', name: 'BITBUG', host: '#code-card', css: 'right:14px;bottom:12px', anim: 'c-hop',
+    hint: 'Lives wherever there is code. Obviously.',
+    desc: 'Every program has one. This one is friendly. Mostly.',
+    pal: { k: '#062b14', g: '#33ff66', d: '#0f7a35', w: '#ffffff' },
+    half: ['.k...', '..k..', '..kkk', '.kwkg', 'kggdk', 'kgdgk', 'kggdk', '.kggk', 'k.kk.'],
+  },
+  {
+    id: 'nully', name: 'NULLY', host: 'footer', css: 'left:6%;top:4px', anim: 'c-float',
+    hint: 'Haunts the very bottom of the page.',
+    desc: 'Points to nothing. Haunts undefined variables.',
+    pal: { k: '#2a2a3a', w: '#ecebff', s: '#b8b8d8' },
+    half: ['..kkk', '.kwww', 'kwwww', 'kwkww', 'kwkww', 'kwwwk', 'ksssw', 'kswsw', 'k.k.k'],
+  },
+  {
+    id: 'sprinklet', name: 'SPRINKLET', host: '.cake-card', css: 'left:6%;top:42%', anim: 'c-peek',
+    hint: "Can't stay away from dessert.",
+    desc: 'Made entirely of cake sprinkles. Very sticky.',
+    pal: { k: '#4a0f2a', p: '#ff8cc0', P: '#ff5fa2', c: '#29e7ff', y: '#ffe03d', g: '#33ff66', w: '#ffffff' },
+    half: ['..kkk', '.kpcp', 'kpypp', 'kpkwp', 'kpkpp', 'kPpgk', '.kPPP', '..kkk'],
+  },
+  {
+    id: 'pinglet', name: 'PINGLET', host: '#ach-card', css: 'right:22%;top:-4px', anim: 'c-swing',
+    hint: 'Hangs upside down near your trophies.',
+    desc: 'Navigates by ping. Absolutely hates lag.',
+    pal: { k: '#0d0820', b: '#8b5cff', B: '#5a3bcc', w: '#ffffff', y: '#ffe03d', s: '#29e7ff' },
+    half: ['s....', '.s.k.', 'k..kb', 'kbkyb', 'kbbbb', '.kbBw', '..kbb', '...kk'],
+  },
+  {
+    id: 'loopsnail', name: 'LOOPSNAIL', host: '#stats-card', css: 'bottom:2px', anim: 'c-crawl',
+    hint: 'Slowly crawling past your stats... forever.',
+    desc: 'while (true) { crawl(); } It never stops.',
+    pal: { k: '#2b1600', s: '#ffb31a', S: '#c97d00', l: '#fff6b0', b: '#9cff6b', w: '#ffffff' },
+    rows: ['..kkkk..k.', '.kssssk..k', 'ksllllsk.k', 'kslSSlskbb', 'kslSllskbw', 'ksllllskbb', '.kssssSbbb', 'kbbbbbbbbk', '.kkkkkkkk.'],
+  },
+  {
+    id: 'glitchling', name: 'GLITCHLING', host: '#msg-card', css: 'right:14px;top:56px', anim: 'c-glitch',
+    hint: 'Corrupting an incoming transmission.',
+    desc: 'Born from a corrupted save file. Harmless. Probably.',
+    pal: { k: '#000000', g: '#33ff66', w: '#ffffff', m: '#ff5fa2' },
+    half: ['kkkkk', 'kgggg', 'kgkwg', 'kgkkg', 'kgggg', 'kgmgk', 'kgggg', 'kkkkk', '.k..k'],
+  },
+];
+const critterRows = (cr) => cr.rows || cr.half.map((r) => r + [...r].reverse().join(''));
+
+function drawSprite(cv, cr, sil) {
+  const rows = critterRows(cr), PX = 3;
+  cv.width = rows[0].length * PX; cv.height = rows.length * PX;
+  const c = cv.getContext('2d');
+  rows.forEach((r, y) => [...r].forEach((ch, x) => {
+    if (ch === '.') return;
+    c.fillStyle = sil || cr.pal[ch];
+    c.fillRect(x * PX, y * PX, PX, PX);
+  }));
+}
+
+const found = new Set();
+function renderCritterLog() {
+  const grid = $('#critter-grid');
+  grid.innerHTML = '';
+  for (const cr of CRITTERS) {
+    const got = found.has(cr.id);
+    const slot = document.createElement('div');
+    slot.className = 'cslot' + (got ? ' got' : '');
+    const cv = document.createElement('canvas');
+    drawSprite(cv, cr, got ? null : '#0f4a22');
+    const b = document.createElement('b'); b.textContent = got ? cr.name : '???';
+    const s = document.createElement('span'); s.textContent = got ? cr.desc : 'Hint: ' + cr.hint;
+    slot.append(cv, b, s);
+    grid.appendChild(slot);
+  }
+  $('#critter-count').textContent = `${found.size}/${CRITTERS.length} FOUND`;
+}
+
+function initCritters() {
+  renderCritterLog();
+  for (const cr of CRITTERS) {
+    const host = $(cr.host);
+    if (!host) continue;
+    const btn = document.createElement('button');
+    btn.className = 'critter ' + cr.anim;
+    btn.style.cssText = cr.css;
+    btn.setAttribute('aria-label', 'A hidden critter');
+    const cv = document.createElement('canvas');
+    drawSprite(cv, cr);
+    btn.appendChild(cv);
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      initAudio();
+      if (found.has(cr.id)) return;
+      found.add(cr.id);
+      sfx.catch();
+      confetti.fromEl(btn, 45);
+      btn.classList.add('caught');
+      setTimeout(() => btn.remove(), 600);
+      addScore(500);
+      renderCritterLog();
+      toast('&#128269;', 'CRITTER FOUND!', `${cr.name} added to your log (${found.size}/${CRITTERS.length})`);
+      if (found.size === CRITTERS.length) setTimeout(() => { confetti.rain(220); achieve('critters'); }, 900);
+    });
+    host.appendChild(btn);
+  }
+}
+
+/* ---------------------------------------------------------------------
    ENTER PARTY
    --------------------------------------------------------------------- */
 function onVisible(el, fn, delay = 0) {
@@ -1442,7 +1607,7 @@ async function enterParty(name, lives = CONFIG.lives) {
   $('#msg-body').textContent = CONFIG.message;
   $('#msg-from').textContent = 'FROM: ' + CONFIG.fromName;
   $('#msg-sign').textContent = '- ' + CONFIG.fromName;
-  renderLyrics(); renderStats(); renderAchievements(); initLoot();
+  renderLyrics(); renderStats(); renderAchievements(); initLoot(); initCritters();
 
   const party = $('#party');
   party.style.display = 'block';
