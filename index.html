@@ -432,8 +432,8 @@ Thanks for being the best co-op partner anyone could ask for. Here's to the next
   gift: {
     label: 'PLAYSTATION STORE GIFT CARD',
     value: '',          // e.g. '$50' (optional)
-    question: '',       // something only he knows the answer to
-    hint: '',           // shown after 3 wrong tries (optional)
+    question: 'What is the release date of GTA 6? (day, month & year)',
+    hint: 'Rockstar finally locked it in for this month. Don\'t forget the year!',
     payload: null,
   },
 };
@@ -1089,7 +1089,27 @@ const cake = (() => {
 /* ---------------------------------------------------------------------
    LOOT CHEST: gift code is AES-GCM encrypted; key = PBKDF2(answer)
    --------------------------------------------------------------------- */
-const normAnswer = (s) => s.normalize('NFKC').trim().toLowerCase().replace(/\s+/g, ' ');
+// Must stay identical to the copy in tools/encrypt-gift.mjs.
+// Any way of writing a date ("Nov 19th, 2026", "19/11/2026", "2026-11-19") becomes one canonical form.
+function normAnswer(s) {
+  s = s.normalize('NFKC').trim().toLowerCase().replace(/\s+/g, ' ');
+  const M = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+  const mon = (w) => (/^[a-z]+$/.test(w) && M[w.slice(0, 3)]) || null;
+  const n2 = (w) => /^\d{1,2}$/.test(w), n4 = (w) => /^\d{4}$/.test(w);
+  const p = s.replace(/(\d+)(st|nd|rd|th)\b/g, '$1').replace(/[,./\-]/g, ' ').trim().split(/\s+/);
+  let y, mo, d;
+  if (p.length === 3) {
+    if (mon(p[0]) && n2(p[1]) && n4(p[2])) [mo, d, y] = [mon(p[0]), +p[1], +p[2]];
+    else if (n2(p[0]) && mon(p[1]) && n4(p[2])) [d, mo, y] = [+p[0], mon(p[1]), +p[2]];
+    else if (n4(p[0]) && n2(p[1]) && n2(p[2])) [y, mo, d] = [+p[0], +p[1], +p[2]];
+    else if (n2(p[0]) && n2(p[1]) && n4(p[2])) {
+      const a = +p[0], b = +p[1]; y = +p[2];
+      if (a > 12 && b <= 12) [d, mo] = [a, b]; else if (b > 12 && a <= 12) [mo, d] = [a, b];
+    }
+  }
+  if (y && mo >= 1 && mo <= 12 && d >= 1 && d <= 31) return `date:${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  return s;
+}
 
 async function decryptGift(answer, p) {
   const b = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
