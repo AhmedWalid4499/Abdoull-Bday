@@ -563,7 +563,7 @@ const CONFIG = {
   lives: 3,
 
   // His new age, e.g. 21 shows "LVL 20 > LVL 21". Leave null to show "level++".
-  age: null,
+  age: 20,
 
   // Who the message at the bottom is from.
   fromName: 'YUTO',
@@ -1190,7 +1190,7 @@ async function runXP() {
   const age = Number(CONFIG.age);
   label.textContent = age ? `LVL ${age - 1} > LVL ${age}` : 'level++';
   $('#partner-tag').textContent = `PARTNER · ${B} · LV.${age || 'MAX'}`;
-  msg.textContent = `EVOLUTION COMPLETE: ${A} → ${B}!\nHappy birthday, ${N}. You both leveled up today.`;
+  msg.textContent = `EVOLUTION COMPLETE: ${A} → ${B}!\nHappy birthday, ${N}. ` + (age ? `You both reached LVL ${age} today.` : 'You both leveled up today.');
   confetti.fromEl(partner.el, 140);
   setTimeout(() => partner.el.classList.remove('evolved'), 1000);
   setTimeout(() => achieve('level'), 1400);
@@ -1783,7 +1783,7 @@ function buildCredits() {
     const fig = document.createElement('figure'), cv = document.createElement('canvas'), cap = document.createElement('figcaption');
     drawSprite(cv, cr); cap.textContent = cr.name; fig.append(cv, cap); $('#cr-cast').appendChild(fig);
   }
-  const stats = [['SCORE', String(score).padStart(7, '0')], ['LIVES LEFT', $('.hud .hp').textContent],
+  const stats = [...(CONFIG.age ? [['LEVEL', String(CONFIG.age)]] : []), ['SCORE', String(score).padStart(7, '0')], ['LIVES LEFT', $('.hud .hp').textContent],
     ['ACHIEVEMENTS', `${unlocked.size}/${ACHIEVEMENTS.length}`], ['CRITTERS', `${found.size}/${CRITTERS.length}`]];
   $('#cr-stats').innerHTML = stats.map(([k]) => `<div><b>${k}</b><span></span></div>`).join('');
   $('#cr-stats').querySelectorAll('span').forEach((s, i) => { s.textContent = stats[i][1]; });
